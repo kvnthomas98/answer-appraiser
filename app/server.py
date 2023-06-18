@@ -26,12 +26,12 @@ from .ordering_components import get_ordering_components
 LOGGER = logging.getLogger(__name__)
 
 openapi_args = dict(
-    title="Workflow runner",
+    title="Answer Appraiser",
     version="1.6.3",
     terms_of_service="",
     translator_component="Utility",
     translator_teams=["Standards Reference Implementation Team"],
-    infores="infores:workflow-runner",
+    infores="infores:answer-appraiser",
     contact={
         "name": "Abrar Mesbah",
         "email": "amesbah@covar.com",
