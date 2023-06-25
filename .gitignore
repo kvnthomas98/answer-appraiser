@@ -1,0 +1,15 @@
+__pycache__/
+.pytest_cache/
+.python-version
+.vscode/
+.vim/
+venv/
+.venv/
+.DS_Store
+*.egg-info/
+*.db
+logs/*
+!logs/.gitkeep
+*.jar
+.env
+*.log

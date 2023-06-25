@@ -1,0 +1,10 @@
+version: '3.7'
+
+services:
+  workflow_runner:
+    image: answer-appraiser
+    container_name: answer_appraiser
+    build:
+      context: .
+    ports:
+      - '${PORT:-9096}:9096'
