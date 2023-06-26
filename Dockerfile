@@ -1,7 +1,7 @@
 FROM renciorg/renci-python-image:v0.0.1
 
 # Add image info
-LABEL org.opencontainers.image.source /github.com/NCATSTranslator/workflow-runner
+LABEL org.opencontainers.image.source /github.com/TranslatorSRI/answer-appraiser
 
 ENV PYTHONHASHSEED=0
 
