@@ -136,7 +136,7 @@ async def sync_get_appraisal(
     if not message.get("results"):
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
-                                     "job_id": qid}, status_code=200)
+                                     "job_id": qid}, status_code=400)
     try:
         get_ordering_components(message)
     except Exception as e:
