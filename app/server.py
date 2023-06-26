@@ -115,7 +115,7 @@ async def get_appraisal(
     LOGGER.setLevel(logging._nameToLevel[log_level])
     message = query_dict["message"]
     qid = str(uuid4())[:8]
-    if "result" not in message:
+    if not message.get("results"):
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=200)
@@ -134,7 +134,7 @@ async def sync_get_appraisal(
     LOGGER.setLevel(logging._nameToLevel[log_level])
     message = query_dict["message"]
     qid = str(uuid4())[:8]
-    if "result" not in message:
+    if not message.get("results"):
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=200)
