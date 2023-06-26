@@ -111,8 +111,8 @@ async def get_appraisal(
 ):
     """Appraise Answers"""
     query_dict = query.dict()
-    log_level = query_dict.get("log_level", "INFO")
-    LOGGER.setLevel(LOGGER.setLevel(logging._nameToLevel[log_level]))
+    log_level = query_dict.get("log_level") or "INFO"
+    LOGGER.setLevel(logging._nameToLevel[log_level])
     message = query_dict["message"]
     qid = str(uuid4())[:8]
     if "result" not in message:
@@ -130,7 +130,7 @@ async def sync_get_appraisal(
     query: Query = Body(..., example=EXAMPLE)
 ):
     query_dict = query.dict()
-    log_level = query_dict["log_level"] or "INFO"
+    log_level = query_dict.get("log_level") or "INFO"
     LOGGER.setLevel(logging._nameToLevel[log_level])
     message = query_dict["message"]
     qid = str(uuid4())[:8]
