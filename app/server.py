@@ -86,7 +86,6 @@ AEXAMPLE = {
 }
 
 EXAMPLE = {
-    "callback": "https://test",
     "message": {
         "query_graph": {
             "nodes": {
