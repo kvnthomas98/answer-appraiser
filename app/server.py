@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 openapi_args = dict(
     title="Answer Appraiser",
-    version="1.6.3",
+    version="0.1.0",
     terms_of_service="",
     translator_component="Utility",
     translator_teams=["Standards Reference Implementation Team"],
@@ -85,6 +85,25 @@ AEXAMPLE = {
     },
 }
 
+EXAMPLE = {
+    "callback": "https://test",
+    "message": {
+        "query_graph": {
+            "nodes": {
+                "n0": {"ids": ["MONDO:0005148"], "categories": ["biolink:Disease"]},
+                "n1": {"categories": ["biolink:PhenotypicFeature"]},
+            },
+            "edges": {
+                "e01": {
+                    "subject": "n0",
+                    "object": "n1",
+                    "predicates": ["biolink:has_phenotype"],
+                }
+            },
+        }
+    },
+}
+
 @APP.post("/get_appraisal", response_model=AsyncQueryResponse)
 async def get_appraisal(
     background_tasks: BackgroundTasks,
@@ -95,12 +114,12 @@ async def get_appraisal(
     log_level = query_dict.get("log_level", "INFO")
     LOGGER.setLevel(LOGGER.setLevel(logging._nameToLevel[log_level]))
     message = query_dict["message"]
+    qid = str(uuid4())[:8]
     if "result" not in message:
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=200)
     callback = query_dict["callback"]
-    qid = str(uuid4())[:8]
     background_tasks.add_task(appraise, qid, message, callback)
     return JSONResponse(content={"status": "Accepted",
                                  "description": f"Appraising answers. Will send response to {callback}",
@@ -108,17 +127,17 @@ async def get_appraisal(
 
 @APP.post("/sync_get_appraisal", response_model=Response)
 async def sync_get_appraisal(
-    query: Query
+    query: Query = Body(..., example=EXAMPLE)
 ):
     query_dict = query.dict()
-    log_level = query_dict.get("log_level", "INFO")
-    LOGGER.setLevel(LOGGER.setLevel(logging._nameToLevel[log_level]))
+    log_level = query_dict["log_level"] or "INFO"
+    LOGGER.setLevel(logging._nameToLevel[log_level])
     message = query_dict["message"]
+    qid = str(uuid4())[:8]
     if "result" not in message:
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=200)
-    qid = str(uuid4())[:8]
     try:
         get_ordering_components(message)
     except Exception as e:
