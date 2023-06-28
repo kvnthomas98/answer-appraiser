@@ -117,7 +117,7 @@ async def get_appraisal(
     if not message.get("results"):
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
-                                     "job_id": qid}, status_code=200)
+                                     "job_id": qid}, status_code=400)
     callback = query_dict["callback"]
     background_tasks.add_task(appraise, qid, message, callback)
     return JSONResponse(content={"status": "Accepted",
