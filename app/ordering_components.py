@@ -19,15 +19,17 @@ def get_clinical_evidence(result, message, logger):
     # TODO Calculate clinical evidence
     return 0
 
+
 def get_novelty(result, message, logger):
     # TODO get novelty from novelty package
     return 0
-                
+
+
 def get_ordering_components(message, logger):
     logger.debug(f"Computing scores for {len(message['results'])} results")
     for result in message.get("results") or []:
         result["ordering_components"] = {
             "confidence": get_confidence(result, message, logger),
             "clinical_evidence": get_clinical_evidence(result, message, logger),
-            "novelty": get_novelty(result, message, logger)
+            "novelty": get_novelty(result, message, logger),
         }

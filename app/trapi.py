@@ -65,7 +65,7 @@ class TRAPI(FastAPI):
             "externalDocs": {
                 "description": "The values for version are restricted according to the regex in this external JSON schema. See schema and examples at url",
                 "url": "https://github.com/NCATSTranslator/translator_extensions/blob/production/x-trapi/",
-            }
+            },
         }
         openapi_schema["info"]["contact"] = self.contact
         openapi_schema["info"]["termsOfService"] = self.terms_of_service
