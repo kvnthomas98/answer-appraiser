@@ -1,14 +1,9 @@
 import logging
-import warnings
 import traceback
 import os
 
-from fastapi import Body, Depends, HTTPException, BackgroundTasks, Request, status
-from fastapi.openapi.docs import (
-    get_swagger_ui_html,
-)
+from fastapi import Body, BackgroundTasks
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 import httpx
 from starlette.middleware.cors import CORSMiddleware
 from uuid import uuid4
@@ -69,90 +64,135 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-AEXAMPLE = {
-    "callback": "https://test",
-    "message": {
-        "query_graph": {
-            "nodes": {
-                "n0": {"ids": ["MONDO:0005148"], "categories": ["biolink:Disease"]},
-                "n1": {"categories": ["biolink:PhenotypicFeature"]},
-            },
-            "edges": {
-                "e01": {
-                    "subject": "n0",
-                    "object": "n1",
-                    "predicates": ["biolink:has_phenotype"],
-                }
-            },
-        }
-    },
-}
-
 EXAMPLE = {
-    "message": {
-        "query_graph": {
-            "nodes": {
-                "n0": {"ids": ["MONDO:0005148"], "categories": ["biolink:Disease"]},
-                "n1": {"categories": ["biolink:PhenotypicFeature"]},
-            },
-            "edges": {
-                "e01": {
-                    "subject": "n0",
-                    "object": "n1",
-                    "predicates": ["biolink:has_phenotype"],
-                }
-            },
-        }
-    },
+  "message": {
+      "query_graph": {
+          "nodes": {
+              "n0": {"ids": ["MESH:D008687"]},
+              "n1": {"categories": ["biolink:Disease"]}
+          },
+          "edges": {
+              "n0n1": {
+                  "subject": "n0",
+                  "object": "n1",
+                  "predicates": ["biolink:treats"]
+              }
+          }
+      },
+      "knowledge_graph": {
+          "nodes": {
+              "MESH:D008687": {
+                  "categories": ["biolink:SmallMolecule"],
+                  "name": "Metformin"
+              },
+              "MONDO:0005148": {
+                  "categories": [
+                      "biolink:Disease"
+                  ],
+                  "name": "type 2 diabetes mellitus"
+              }
+          },
+          "edges": {
+              "n0n1": {
+                  "subject": "MESH:D008687",
+                  "object": "MONDO:0005148",
+                  "predicate": "biolink:treats",
+                  "sources": [
+                      {
+                          "resource_id": "infores:kp0",
+                          "resource_role": "primary_knowledge_source"
+                      }
+                  ]
+              }
+          }
+      },
+      "results": [
+          {
+              "node_bindings": {
+                  "n0": [
+                      {
+                          "id": "MESH:D008687"
+                      }
+                  ],
+                  "n1": [
+                      {
+                          "id": "MONDO:0005148"
+                      }
+                  ]
+              },
+              "analyses": [
+                  {
+                      "resource_id": "kp0",
+                      "edge_bindings": {
+                          "n0n1": [
+                              {
+                                  "id": "n0n1"
+                              }
+                          ]
+                      }
+                  }
+              ]
+          }
+      ]
+  }
 }
 
-@APP.post("/get_appraisal", response_model=AsyncQueryResponse)
+ASYNC_EXAMPLE = {
+    "callback": "http://test",
+    **EXAMPLE,
+}
+
+
+async def async_appraise(message, callback, logger: logging.Logger):
+    try:
+        get_ordering_components(message, logger)
+    except Exception:
+        logger.error(f"Something went wrong while appraising: {traceback.format_exc()}")
+    try:    
+        logger.info(f"Posting to callback {callback}")
+        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout=600.0)) as client:
+            res = await client.post(callback, json=message)
+            logger.info(f"Posted to {callback} with code {res.status_code}")
+    except Exception as e:
+        logger.error(f"Unable to post to callback {callback}.")
+
+@APP.post("/async_get_appraisal", response_model=AsyncQueryResponse)
 async def get_appraisal(
     background_tasks: BackgroundTasks,
-    query: AsyncQuery = Body(..., example=AEXAMPLE)
+    query: AsyncQuery = Body(..., example=ASYNC_EXAMPLE)
 ):
     """Appraise Answers"""
+    qid = str(uuid4())[:8]
     query_dict = query.dict()
     log_level = query_dict.get("log_level") or "WARNING"
     logger = get_logger(qid, log_level)
     message = query_dict["message"]
-    qid = str(uuid4())[:8]
     if not message.get("results"):
         logger.warning("No results given.")
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=400)
     callback = query_dict["callback"]
-    background_tasks.add_task(appraise, qid, message, callback)
+    background_tasks.add_task(async_appraise, message, callback, logger)
     return JSONResponse(content={"status": "Accepted",
                                  "description": f"Appraising answers. Will send response to {callback}",
                                  "job_id": qid}, status_code=200)
 
-@APP.post("/sync_get_appraisal", response_model=Response)
+@APP.post("/get_appraisal", response_model=Response)
 async def sync_get_appraisal(
     query: Query = Body(..., example=EXAMPLE)
 ):
+    qid = str(uuid4())[:8]
     query_dict = query.dict()
     log_level = query_dict.get("log_level") or "WARNING"
     logger = get_logger(qid, log_level)
     message = query_dict["message"]
-    qid = str(uuid4())[:8]
     if not message.get("results"):
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=400)
     try:
         get_ordering_components(message, logger)
-
-async def appraise(qid, message, callback):
-    try:
-        get_ordering_components(message)
-    except Exception as e:
-        LOGGER.error(f"Something went wrong while appraising {qid}")
-    try:    
-        LOGGER.info(f"[{qid}] Posting to callback {callback}")
-        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout=600.0)) as client:
-            res = await client.post(callback, json=message)
-            LOGGER.info(f"[{qid}] Posted to {callback} with code {res.status_code}")
-    except Exception as e:
-        LOGGER.error(f"Unable to post to callback {callback}.")
+    except Exception:
+        logger.error(f"Something went wrong while appraising: {traceback.format_exc()}")
+    return Response(message=message)
