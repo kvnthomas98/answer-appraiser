@@ -35,8 +35,8 @@ def test(extra_args):
     and then exits.
     """
     command = """\
-    docker build -t workflow-runner-testing -f Dockerfile.test .
-    docker run -it workflow-runner-testing\
+    docker build -t appraiser-testing -f Dockerfile.test .
+    docker run -it appraiser-testing\
     """
     run_command(command + extra_args)
 
