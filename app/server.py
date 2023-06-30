@@ -20,9 +20,12 @@ from reasoner_pydantic import (
     Query
 )
 
+from .logger import setup_logger, get_logger
 from .trapi import TRAPI
 from .ordering_components import get_ordering_components
 
+
+setup_logger()
 LOGGER = logging.getLogger(__name__)
 
 openapi_args = dict(
@@ -110,11 +113,12 @@ async def get_appraisal(
 ):
     """Appraise Answers"""
     query_dict = query.dict()
-    log_level = query_dict.get("log_level") or "INFO"
-    LOGGER.setLevel(logging._nameToLevel[log_level])
+    log_level = query_dict.get("log_level") or "WARNING"
+    logger = get_logger(qid, log_level)
     message = query_dict["message"]
     qid = str(uuid4())[:8]
     if not message.get("results"):
+        logger.warning("No results given.")
         return JSONResponse(content={"status": "Rejected",
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=400)
@@ -129,8 +133,8 @@ async def sync_get_appraisal(
     query: Query = Body(..., example=EXAMPLE)
 ):
     query_dict = query.dict()
-    log_level = query_dict.get("log_level") or "INFO"
-    LOGGER.setLevel(logging._nameToLevel[log_level])
+    log_level = query_dict.get("log_level") or "WARNING"
+    logger = get_logger(qid, log_level)
     message = query_dict["message"]
     qid = str(uuid4())[:8]
     if not message.get("results"):
@@ -138,11 +142,7 @@ async def sync_get_appraisal(
                                      "description": "No Results.",
                                      "job_id": qid}, status_code=400)
     try:
-        get_ordering_components(message)
-    except Exception as e:
-        LOGGER.error(f"Something went wrong while appraising {qid}")
-    return Response(message=message, logs=LOGGER.handlers[0].store)
-
+        get_ordering_components(message, logger)
 
 async def appraise(qid, message, callback):
     try:
