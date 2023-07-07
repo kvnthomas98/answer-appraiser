@@ -4,15 +4,18 @@
 def get_confidence(result, message, logger):
     # TODO Implement actual g()-score
     score_sum = 0
-    score_count = 0
+    non_zero_count = 0
+    eps = 0.001
     for analysis in result.get("analyses") or []:
         if analysis.get("score") is not None:
             score_sum += analysis["score"]
-            score_count += 1
-    if score_count > 0:
-        return score_sum / score_count
-    else:
-        return 0
+            if analysis["score"] > 0:
+                non_zero_count += 1
+    if non_zero_count == 1 and score_sum > 1 - eps:
+        score_sum = 1 - eps
+    elif non_zero_count > 1 and score_sum > 1:
+        score_sum = 1
+    return score_sum
 
 
 def get_clinical_evidence(result, message, logger):
